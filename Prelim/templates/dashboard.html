@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard - Cutie Blog ✨</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Quicksand',sans-serif; }
+body { background:#FFF5F8; color:#FF4FA3; display:flex; justify-content:center; transition:0.3s; min-height:100vh; overflow-x:hidden; position:relative; }
+.dark-mode { background:#1e1e1e; color:#f5f5f5; }
+.container { width:100%; max-width:600px; margin:30px 0; }
+header { display:flex; justify-content:space-between; align-items:center; padding:0 10px 20px 10px; }
+header h1 { font-weight:600; color:#FF6FB5; font-size:1.8rem; }
+.logout-btn { background:#FF6FB5; border:none; color:white; padding:8px 15px; border-radius:20px; cursor:pointer; font-weight:600; transition:background 0.3s; text-decoration:none; }
+.logout-btn:hover { background:#e05599; }
+.top-bar { display:flex; justify-content:space-between; margin-bottom:15px; }
+.toggle-dark { background:#FF6FB5; border:none; color:white; padding:8px 15px; border-radius:20px; cursor:pointer; font-weight:600; }
+
+/* Post creation */
+.create-post { background:#FFEFFF; padding:15px; border-radius:15px; margin-bottom:20px; box-shadow:0 5px 15px rgba(255,111,181,0.2); position:relative; }
+.dark-mode .create-post, .dark-mode .post { background:#2c2c2c; }
+.create-post textarea { width:100%; border:none; border-radius:10px; padding:10px; margin-bottom:10px; font-family:'Quicksand',sans-serif; }
+.photo-btn, .create-post button { display:inline-block; background:#FF6FB5; color:white; border:none; padding:8px 12px; border-radius:20px; cursor:pointer; font-weight:600; margin-right:5px; }
+
+.post { background:#FFEFFF; padding:15px; border-radius:15px; margin-bottom:20px; box-shadow:0 5px 15px rgba(255,111,181,0.2); position:relative; transition:0.2s; }
+.post:hover { transform:translateY(-3px); }
+.post-header { display:flex; align-items:center; margin-bottom:10px; }
+.profile-pic { width:45px; height:45px; border-radius:50%; margin-right:10px; object-fit:cover; cursor:pointer; }
+.username { font-weight:600; color:#FF4FA3; }
+.time { font-size:12px; color:gray; }
+.post-content { margin:10px 0; white-space:pre-wrap; }
+.post img { width:100%; border-radius:12px; margin-top:10px; }
+.counters { font-size:13px; margin-top:8px; color:#777; }
+.actions { display:flex; justify-content:space-around; margin-top:10px; padding-top:10px; border-top:1px solid #f5c6dd; }
+.action-btn { cursor:pointer; font-size:14px; transition:0.2s; display:flex; align-items:center; }
+.action-btn:hover { color:#FF4FA3; }
+.liked { color:#e0245e; font-weight:bold; }
+
+.comments { margin-top:10px; display:none; }
+.comment { background:white; padding:8px; border-radius:10px; margin-top:5px; font-size:13px; display:flex; align-items:center; }
+.comment img { width:30px; height:30px; border-radius:50%; margin-right:8px; object-fit:cover; cursor:pointer; }
+.comment strong { margin-right:5px; }
+
+.comment-input { display:flex; margin-top:10px; overflow:hidden; transition:max-height 0.3s ease; max-height:0; }
+.comment-input.active { max-height:80px; }
+.comment-input input[type=text] { flex:1; padding:8px; border-radius:20px; border:1px solid #ddd; font-family:'Quicksand',sans-serif; transition:flex 0.3s ease,border-color 0.3s ease; }
+.comment-input input[type=file] { display:none; }
+.comment-input input[type=text]:focus { flex:1.5; border-color:#FF6FB5; }
+.comment-input button { margin-left:5px; padding:8px 12px; border-radius:20px; border:none; background:#FF6FB5; color:white; cursor:pointer; font-weight:600; }
+
+.dark-mode .profile-pic { border:2px solid #FF6FB5; }
+.dark-mode .counters { color:#ccc; }
+.dark-mode .time { color:#bbb; }
+.delete-btn { color:red; cursor:pointer; font-weight:bold; }
+
+.floating-emoji { position:fixed; font-size:20px; pointer-events:none; z-index:1; opacity:0.8; animation: floatBackground 10s linear infinite; }
+@keyframes floatBackground { 0% { transform:translateY(110vh) rotate(0deg) scale(1); opacity:0; } 10% { opacity:0.6; } 50% { opacity:0.4; } 100% { transform:translateY(-10vh) rotate(360deg) scale(1.5); opacity:0; } }
+.heart-float { position:absolute; font-size:24px; pointer-events:none; animation:heartUp 0.8s forwards; }
+@keyframes heartUp { 0% { opacity:1; transform:translateY(0) scale(1); } 50% { opacity:1; transform:translateY(-15px) scale(1.5); } 100% { opacity:0; transform:translateY(-40px) scale(1); } }
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+  <h1>🌸 Cutie Social Feed 🌸</h1>
+  <a href="{% url 'logout' %}" class="logout-btn">Logout</a>
+</header>
+
+<div class="top-bar">
+  <button class="toggle-dark">Toggle Dark Mode</button>
+</div>
+
+<div class="create-post">
+  <input type="file" id="profilePicInput" accept="image/*">
+  <textarea id="postText" rows="3" placeholder="Share something cute... 💕"></textarea>
+  <input type="file" id="postImage" accept="image/*" style="display:none;">
+  <button class="photo-btn" onclick="document.getElementById('postImage').click()">📷 Photo</button>
+  <button onclick="createPost()">Post</button>
+</div>
+
+<div id="feed"></div>
+</div>
+
+<script>
+const emojis = ['🌸','💖','✨','🐾','💗','🌈'];
+function createFloatingEmoji() {
+    const emoji = document.createElement('span');
+    emoji.classList.add('floating-emoji');
+    emoji.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+    emoji.style.left = Math.random()*100 + 'vw';
+    emoji.style.fontSize = (Math.random()*20+15) + 'px';
+    document.body.appendChild(emoji);
+    setTimeout(()=>emoji.remove(),10000);
+}
+setInterval(createFloatingEmoji,700);
+
+let posts = JSON.parse(localStorage.getItem('posts') || '[]');
+function savePosts() { localStorage.setItem('posts', JSON.stringify(posts)); }
+
+function renderPosts() {
+    const feed = document.getElementById('feed');
+    feed.innerHTML = '';
+    posts.slice().reverse().forEach((post, idxRev)=>{
+        const idx = posts.length-1-idxRev;
+        const div = document.createElement('div');
+        div.className = 'post';
+        div.innerHTML = `
+            <div class="post-header">
+                <img src="${post.profilePic || 'https://placekitten.com/50/50'}" class="profile-pic" onclick="alert('Go to profile page')">
+                <div>
+                    <div class="username">${post.username || 'You'}</div>
+                    <div class="time">${post.time}</div>
+                </div>
+            </div>
+            ${post.text?`<div class="post-content">${post.text}</div>`:''}
+            ${post.image?`<img src="${post.image}" />`:''}
+            <div class="counters">
+                <span class="like-count">${post.likes}</span> ❤️ • 
+                <span class="comment-count">${post.comments.length}</span> 💬
+            </div>
+            <div class="actions">
+                <span class="action-btn like-btn">❤️ Like</span>
+                <span class="action-btn comment-btn">💬 Comment</span>
+                <span class="action-btn share-btn">🔄 Share</span>
+                <span class="action-btn delete-btn">🗑️ Delete</span>
+            </div>
+            <div class="comments">${post.comments.map(c=>`<div class="comment"><img src="${c.profilePic||'https://placekitten.com/30/30'}" onclick="alert('Go to profile page')"> <strong>${c.username||'Anonymous'}:</strong> ${c.text}</div>`).join('')}</div>
+            <div class="comment-input">
+                <input type="text" placeholder="Write a cute comment...">
+                <input type="file" accept="image/*">
+                <button>Post</button>
+            </div>
+        `;
+        feed.appendChild(div);
+        attachPostEvents(div, idx);
+    });
+}
+
+function createPost() {
+    const username = 'You';
+    const profileFile = document.getElementById('profilePicInput').files[0];
+    const text = document.getElementById('postText').value;
+    const file = document.getElementById('postImage').files[0];
+    const time = 'Just now';
+    if(!text && !file) return;
+
+    function addPost(profilePicData){
+        posts.push({username, profilePic: profilePicData, text, image:null, likes:0, comments:[], time});
+        if(file){
+            const reader = new FileReader();
+            reader.onload=function(e){
+                posts[posts.length-1].image = e.target.result;
+                savePosts();
+                renderPosts();
+            }
+            reader.readAsDataURL(file);
+        } else {
+            savePosts();
+            renderPosts();
+        }
+    }
+
+    if(profileFile){
+        const reader = new FileReader();
+        reader.onload = function(e){ addPost(e.target.result); }
+        reader.readAsDataURL(profileFile);
+    } else addPost(null);
+
+    document.getElementById('postText').value='';
+    document.getElementById('postImage').value='';
+}
+
+function attachPostEvents(postDiv,index){
+    const likeBtn = postDiv.querySelector('.like-btn');
+    const commentBtn = postDiv.querySelector('.comment-btn');
+    const deleteBtn = postDiv.querySelector('.delete-btn');
+    const shareBtn = postDiv.querySelector('.share-btn');
+    const commentsDiv = postDiv.querySelector('.comments');
+    const commentInputDiv = postDiv.querySelector('.comment-input');
+    const commentInput = commentInputDiv.querySelector('input[type=text]');
+    const commentFileInput = commentInputDiv.querySelector('input[type=file]');
+    const commentBtnPost = commentInputDiv.querySelector('button');
+
+    likeBtn.onclick = ()=>{
+        if(!likeBtn.classList.contains('liked')){
+            posts[index].likes++;
+        } else posts[index].likes--;
+        likeBtn.classList.toggle('liked');
+        savePosts();
+        renderPosts();
+    }
+
+    commentBtn.onclick = ()=>{
+        const isVisible = commentsDiv.style.display==='block';
+        commentsDiv.style.display=isVisible?'none':'block';
+        commentInputDiv.classList.toggle('active',!isVisible);
+        if(!isVisible) commentInput.focus();
+    }
+
+    commentBtnPost.onclick = ()=>{
+        const cText = commentInput.value.trim();
+        if(!cText) return;
+        const cUsername = 'You';
+        const cFile = commentFileInput.files[0];
+        if(cFile){
+            const reader = new FileReader();
+            reader.onload = function(e){
+                posts[index].comments.push({username:cUsername, profilePic:e.target.result, text:cText});
+                savePosts();
+                renderPosts();
+            }
+            reader.readAsDataURL(cFile);
+        } else {
+            posts[index].comments.push({username:cUsername, profilePic:null, text:cText});
+            savePosts();
+            renderPosts();
+        }
+        commentInput.value='';
+        commentFileInput.value='';
+    }
+
+    deleteBtn.onclick = ()=>{
+        posts.splice(index,1);
+        savePosts();
+        renderPosts();
+    }
+
+    shareBtn.onclick = ()=>{
+        const p = {...posts[index], time:'Just now'};
+        posts.push(p);
+        savePosts();
+        renderPosts();
+    }
+}
+
+document.querySelector('.toggle-dark').onclick = ()=>document.body.classList.toggle('dark-mode');
+renderPosts();
+</script>
+</body>
+</html>
